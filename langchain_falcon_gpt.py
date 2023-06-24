@@ -11,6 +11,7 @@ from langchain.schema import AgentAction, AgentFinish
 import os
 import re
 import googlemaps
+import requests
 
 from dotenv import load_dotenv
 import chainlit as cl
@@ -18,7 +19,7 @@ import chainlit as cl
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "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"
 api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
 client = googlemaps.Client(api_key)
 
@@ -142,6 +143,32 @@ def search_places(input_text):
 
     return results
 
+
+def search_tripadvisor(input_text):
+    if not input_text:
+        raise ValueError("Input text cannot be empty")
+    
+    # Realiza a chamada para a API do TripAdvisor
+    api_key = "B800C0A750F244FB91624BDAA9B1AEFA"
+    url = f"https://api.tripadvisor.com/api/internal/1.14/search"
+    params = {
+        "key": api_key,
+        "query": input_text
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    # Processa as informações recebidas
+    results = []
+    for result in data.get("results", []):
+        name = result.get("name", "N/A")
+        address = result.get("address", "N/A")
+        rating = result.get("rating", "N/A")
+        reviews = result.get("num_reviews", "N/A")
+        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
+
+    return results
+
 @cl.langchain_factory
 def agent():
     tools = [
@@ -157,7 +184,7 @@ def agent():
         ),
         Tool(
             name = "Search tripadvisor",
-            func=search_online,
+            func=search_tripadvisor,
             description="useful for when you need to answer trip plan questions"
         ),
         Tool(
