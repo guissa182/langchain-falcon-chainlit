@@ -107,12 +107,6 @@ class CustomOutputParser(AgentOutputParser):
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
 
-def search_hotel(input_text):
-    if not input_text:
-        raise ValueError("Input text cannot be empty")
-    search = DuckDuckGoSearchRun().run(f"site:booking.com {input_text}")
-    return search
-
 def search_general(input_text):
     if not input_text:
         raise ValueError("Input text cannot be empty")
@@ -162,6 +156,42 @@ def search_tripadvisor(input_text):
 
     return results
 
+def search_amadeus(input_text):
+    if not input_text:
+        raise ValueError("Input text cannot be empty")
+
+    # Realiza a chamada para a API do Amadeus
+    client_id = "JDedljzSkzFbFlMwq5VFISO2pzJWe5tz"
+    client_secret = "zk1sDqmAHApAPfJx"
+    url = "https://api.amadeus.com/v1/security/oauth2/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret
+    }
+    response = requests.post(url, headers=headers, data=data)
+    access_token = response.json().get("access_token")
+
+    # Faz a pesquisa de hotéis usando o access_token obtido
+    url = "https://api.amadeus.com/v2/shopping/hotel-offers"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    params = {"cityCode": input_text}
+    response = requests.get(url, headers=headers, params=params)
+    data = response.json()
+
+    # Processa as informações recebidas
+    results = []
+    for result in data.get("data", []):
+        hotel = result.get("hotel", {})
+        name = hotel.get("name", "N/A")
+        address = hotel.get("address", {}).get("lines", ["N/A"])
+        rating = hotel.get("rating", "N/A")
+        reviews = hotel.get("reviews", "N/A")
+        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
+
+    return results
+
 @cl.langchain_factory
 def agent():
     tools = [
@@ -181,8 +211,8 @@ def agent():
             description="useful for when you need to answer trip plan questions"
         ),
         Tool(
-            name = "Search booking",
-            func=search_hotel,
+            name = "Search amadeus",
+            func=search_amadeus,
             description="useful for when you need to answer hotel questions"
         )
     ]
