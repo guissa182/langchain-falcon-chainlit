@@ -1,14 +1,12 @@
-# Welcome to Chainlit! 🚀🤖
+# Bem-vindo ao TripIt! ![Result](https://cdn.discordapp.com/attachments/684261091743760435/1122224480232685578/55c22216-a62d-46d7-8235-31e50654fd06_resized_resized.png)
 
-Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
+![Result](https://cdn.discordapp.com/attachments/684261091743760435/1122223751019380756/55c22216-a62d-46d7-8235-31e50654fd06_resized.png)
 
-## Useful Links 🔗
+Olá, usuário! 👋 Seja bem-vindo ao TripIt! Estamos animados em tê-lo aqui.
 
-- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
-- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/ZThrUxbAYw) to ask questions, share your projects, and connect with other developers! 💬
+Escreva para nós e compartilhe seu destino dos sonhos. Estamos prontos para ajudá-lo a transformar seus planos em realidade.
 
-We can't wait to see what you create with Chainlit! Happy coding! 💻😊
+Abrace a emoção de explorar novos lugares, descobrir culturas diferentes e criar memórias inesquecíveis.
 
-## Welcome screen
+Divirta-se planejando sua próxima aventura com o TripIt! ✈️😊
 
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.

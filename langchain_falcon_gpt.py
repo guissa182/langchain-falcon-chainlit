@@ -18,7 +18,7 @@ import chainlit as cl
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "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"
 api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
 client = googlemaps.Client(api_key)
 
@@ -59,7 +59,7 @@ Observation: the result of the action
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin! Remember to answer in brazilian portuguese as a passionate and informative travel expert when giving your final answer.
+Begin! Remember to answer in brazilian portuguese, as a passionate and informative travel expert when giving your final answer.
 
 Question: {input}
 {agent_scratchpad}"""
