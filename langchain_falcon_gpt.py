@@ -11,6 +11,7 @@ from langchain.schema import AgentAction, AgentFinish
 import os
 import re
 import googlemaps
+import requests
 
 from dotenv import load_dotenv
 import chainlit as cl
@@ -18,7 +19,7 @@ import chainlit as cl
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "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"
 api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
 client = googlemaps.Client(api_key)
 
@@ -106,12 +107,6 @@ class CustomOutputParser(AgentOutputParser):
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
 
-def search_online(input_text):
-    if not input_text:
-        raise ValueError("Input text cannot be empty")
-    search = DuckDuckGoSearchRun().run(f"site:tripadvisor.com {input_text}")
-    return search
-
 def search_hotel(input_text):
     if not input_text:
         raise ValueError("Input text cannot be empty")
@@ -142,6 +137,31 @@ def search_places(input_text):
 
     return results
 
+def search_tripadvisor(input_text):
+    if not input_text:
+        raise ValueError("Input text cannot be empty")
+    
+    # Realiza a chamada para a API do TripAdvisor
+    api_key = "B800C0A750F244FB91624BDAA9B1AEFA"
+    url = f"https://api.tripadvisor.com/api/internal/1.14/search"
+    params = {
+        "key": api_key,
+        "query": input_text
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    # Processa as informações recebidas
+    results = []
+    for result in data.get("results", []):
+        name = result.get("name", "N/A")
+        address = result.get("address", "N/A")
+        rating = result.get("rating", "N/A")
+        reviews = result.get("num_reviews", "N/A")
+        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
+
+    return results
+
 @cl.langchain_factory
 def agent():
     tools = [
@@ -157,7 +177,7 @@ def agent():
         ),
         Tool(
             name = "Search tripadvisor",
-            func=search_online,
+            func=search_tripadvisor,
             description="useful for when you need to answer trip plan questions"
         ),
         Tool(
