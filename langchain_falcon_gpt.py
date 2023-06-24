@@ -19,7 +19,7 @@ import chainlit as cl
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "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"
 api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
 client = googlemaps.Client(api_key)
 
@@ -169,6 +169,42 @@ def search_tripadvisor(input_text):
 
     return results
 
+def search_amadeus(input_text):
+    if not input_text:
+        raise ValueError("Input text cannot be empty")
+
+    # Realiza a chamada para a API do Amadeus
+    client_id = "JDedljzSkzFbFlMwq5VFISO2pzJWe5tz"
+    client_secret = "zk1sDqmAHApAPfJx"
+    url = "https://api.amadeus.com/v1/security/oauth2/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret
+    }
+    response = requests.post(url, headers=headers, data=data)
+    access_token = response.json().get("access_token")
+
+    # Faz a pesquisa de hotéis usando o access_token obtido
+    url = "https://api.amadeus.com/v2/shopping/hotel-offers"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    params = {"cityCode": input_text}
+    response = requests.get(url, headers=headers, params=params)
+    data = response.json()
+
+    # Processa as informações recebidas
+    results = []
+    for result in data.get("data", []):
+        hotel = result.get("hotel", {})
+        name = hotel.get("name", "N/A")
+        address = hotel.get("address", {}).get("lines", ["N/A"])
+        rating = hotel.get("rating", "N/A")
+        reviews = hotel.get("reviews", "N/A")
+        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
+
+    return results
+
 @cl.langchain_factory
 def agent():
     tools = [
@@ -189,7 +225,7 @@ def agent():
         ),
         Tool(
             name = "Search booking",
-            func=search_hotel,
+            func=search_amadeus,
             description="useful for when you need to answer hotel questions"
         )
     ]
