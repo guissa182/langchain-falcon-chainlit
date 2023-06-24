@@ -10,6 +10,7 @@ from langchain.schema import AgentAction, AgentFinish
 
 import os
 import re
+import googlemaps
 
 from dotenv import load_dotenv
 import chainlit as cl
@@ -17,7 +18,9 @@ import chainlit as cl
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "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"
+api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
+client = googlemaps.Client(api_key)
 
 
 '''
@@ -121,6 +124,24 @@ def search_general(input_text):
     search = DuckDuckGoSearchRun().run(f"{input_text}")
     return search
 
+def search_places(input_text):
+    if not input_text:
+        raise ValueError("Input text cannot be empty")
+
+    # Realiza a busca do cliente
+    places_result = client.places(query=input_text)
+
+    # Processa as informações recebidas
+    results = []
+    for place in places_result["results"]:
+        name = place["name"]
+        address = place.get("formatted_address", "N/A")
+        rating = place.get("rating", "N/A")
+        reviews = place.get("user_ratings_total", "N/A")
+        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
+
+    return results
+
 @cl.langchain_factory
 def agent():
     tools = [
@@ -128,6 +149,11 @@ def agent():
             name = "Search general",
             func=search_general,
             description="useful for when you need to answer general travel questions"
+        ),
+        Tool(
+            name = "Search places",
+            func=search_places,
+            description="Useful for when you need to answer questions about bars, restaurants, burger joints, cafes, and attractions in a specific location"
         ),
         Tool(
             name = "Search tripadvisor",
