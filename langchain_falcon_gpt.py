@@ -1,7 +1,10 @@
+import os
+import re
+
 from typing import List, Union
 
 from langchain import LLMChain
-from langchain.tools import DuckDuckGoSearchRun, GooglePlacesTool
+from langchain.tools import GooglePlacesTool
 from langchain.chat_models import ChatOpenAI
 
 from langchain.prompts import StringPromptTemplate
@@ -9,22 +12,16 @@ from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOut
 from langchain.schema import AgentAction, AgentFinish
 from langchain.utilities import GoogleSearchAPIWrapper
 
-import os
-import re
-import googlemaps
-import requests
-
 from dotenv import load_dotenv
 import chainlit as cl
 
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "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"
-os.environ["GOOGLE_CSE_ID"] = "723cd5eca0dd145fa"
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAXIFp73B_T38M2EenXb4NDn1fgEQPh3vQ"
-os.environ["GPLACES_API_KEY"] = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
-# api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
+os.environ["OPENAI_API_KEY"] = "Your Open AI API Key"
+os.environ["GOOGLE_CSE_ID"] = "Your Google CSE ID"
+os.environ["GOOGLE_API_KEY"] = "Your Google API Key"
+os.environ["GPLACES_API_KEY"] = "Your Google Places API Key"
 
 
 '''
@@ -111,23 +108,13 @@ class CustomOutputParser(AgentOutputParser):
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
 
-# def search_general(input_text):
-#     if not input_text:
-#         raise ValueError("Input text cannot be empty")
-#     search = DuckDuckGoSearchRun().run(f"{input_text}")
-#     return search
-
 def search_general(input_text):
     search = GoogleSearchAPIWrapper(k=5).run(f"{input_text}")
     return search
 
-def search_online(input_text):
-    search = DuckDuckGoSearchRun().run(f"site:tripadvisor.com things to do{input_text}")
-    return search
-
 def search_places(input_text):
     search = GooglePlacesTool().run(f"{input_text}")
-    return search
+    return search_general(search)
 
 @cl.langchain_factory
 def agent():
