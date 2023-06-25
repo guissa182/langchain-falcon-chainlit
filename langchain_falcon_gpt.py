@@ -1,12 +1,13 @@
 from typing import List, Union
 
 from langchain import LLMChain
-from langchain.tools import DuckDuckGoSearchRun 
+from langchain.tools import DuckDuckGoSearchRun, GooglePlacesTool
 from langchain.chat_models import ChatOpenAI
 
 from langchain.prompts import StringPromptTemplate
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 from langchain.schema import AgentAction, AgentFinish
+from langchain.utilities import GoogleSearchAPIWrapper
 
 import os
 import re
@@ -19,9 +20,11 @@ import chainlit as cl
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ["OPENAI_API_KEY"] = "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"
-api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
-client = googlemaps.Client(api_key)
+os.environ["OPENAI_API_KEY"] = "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"
+os.environ["GOOGLE_CSE_ID"] = "723cd5eca0dd145fa"
+os.environ["GOOGLE_API_KEY"] = "AIzaSyAXIFp73B_T38M2EenXb4NDn1fgEQPh3vQ"
+os.environ["GPLACES_API_KEY"] = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
+# api_key = "AIzaSyDvBFp58uAImy3yBGbmlDVIktPvjoO85LA"
 
 
 '''
@@ -57,10 +60,10 @@ Action: the action to take, should be one of [{tool_names}]
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+Thought: I now have the final answer, and I will provide the address, phone number, and website if they exist.
+Final Answer: The conclusive response to the original input question, including the data obtained from the used tool.
 
-Begin! Remember to answer in brazilian portuguese, as a passionate and informative travel expert when giving your final answer.
+Begin! Remember to answer in brazilian portuguese as a passionate and informative travel expert when giving your final answer. 
 
 Question: {input}
 {agent_scratchpad}"""
@@ -79,6 +82,7 @@ class CustomPromptTemplate(StringPromptTemplate):
         for action, observation in intermediate_steps:
             thoughts += action.log
             thoughts += f"\nObservation: {observation}\nThought: "
+        print(thoughts)
         # Set the agent_scratchpad variable to that value
         kwargs["agent_scratchpad"] = thoughts
         # Create a tools variable from the list of tools provided
@@ -100,121 +104,49 @@ class CustomOutputParser(AgentOutputParser):
         regex = r"Action\s*:\s*(.*?)\s*Action\s*Input\s*:\s*(.*?)\s*(?:Observation:|$)"
         match = re.search(regex, llm_output, re.DOTALL)
         if not match:
-            raise ValueError(f"Could not parse LLM output: `{llm_output}`")
+            raise ValueError(f"{llm_output}")
         action = match.group(1).strip()
         action_input = match.group(2).strip()
         # Return the action and action input
         return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
 
 
+# def search_general(input_text):
+#     if not input_text:
+#         raise ValueError("Input text cannot be empty")
+#     search = DuckDuckGoSearchRun().run(f"{input_text}")
+#     return search
+
 def search_general(input_text):
-    if not input_text:
-        raise ValueError("Input text cannot be empty")
-    search = DuckDuckGoSearchRun().run(f"{input_text}")
+    search = GoogleSearchAPIWrapper(k=5).run(f"{input_text}")
+    return search
+
+def search_online(input_text):
+    search = DuckDuckGoSearchRun().run(f"site:tripadvisor.com things to do{input_text}")
     return search
 
 def search_places(input_text):
-    if not input_text:
-        raise ValueError("Input text cannot be empty")
-
-    # Realiza a busca do cliente
-    places_result = client.places(query=input_text)
-
-    # Processa as informações recebidas
-    results = []
-    for place in places_result["results"]:
-        name = place["name"]
-        address = place.get("formatted_address", "N/A")
-        rating = place.get("rating", "N/A")
-        reviews = place.get("user_ratings_total", "N/A")
-        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
-
-    return results
-
-def search_tripadvisor(input_text):
-    if not input_text:
-        raise ValueError("Input text cannot be empty")
-    
-    # Realiza a chamada para a API do TripAdvisor
-    api_key = "B800C0A750F244FB91624BDAA9B1AEFA"
-    url = f"https://api.tripadvisor.com/api/internal/1.14/search"
-    params = {
-        "key": api_key,
-        "query": input_text
-    }
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    # Processa as informações recebidas
-    results = []
-    for result in data.get("results", []):
-        name = result.get("name", "N/A")
-        address = result.get("address", "N/A")
-        rating = result.get("rating", "N/A")
-        reviews = result.get("num_reviews", "N/A")
-        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
-
-    return results
-
-def search_amadeus(input_text):
-    if not input_text:
-        raise ValueError("Input text cannot be empty")
-
-    # Realiza a chamada para a API do Amadeus
-    client_id = "JDedljzSkzFbFlMwq5VFISO2pzJWe5tz"
-    client_secret = "zk1sDqmAHApAPfJx"
-    url = "https://api.amadeus.com/v1/security/oauth2/token"
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret
-    }
-    response = requests.post(url, headers=headers, data=data)
-    access_token = response.json().get("access_token")
-
-    # Faz a pesquisa de hotéis usando o access_token obtido
-    url = "https://api.amadeus.com/v2/shopping/hotel-offers"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    params = {"cityCode": input_text}
-    response = requests.get(url, headers=headers, params=params)
-    data = response.json()
-
-    # Processa as informações recebidas
-    results = []
-    for result in data.get("data", []):
-        hotel = result.get("hotel", {})
-        name = hotel.get("name", "N/A")
-        address = hotel.get("address", {}).get("lines", ["N/A"])
-        rating = hotel.get("rating", "N/A")
-        reviews = hotel.get("reviews", "N/A")
-        results.append({"name": name, "address": address, "rating": rating, "reviews": reviews})
-
-    return results
+    search = GooglePlacesTool().run(f"{input_text}")
+    return search
 
 @cl.langchain_factory
 def agent():
     tools = [
         Tool(
-            name = "Search general",
+            name="Google Search",
+            description="useful for when you need to answer general travel questions",
             func=search_general,
-            description="useful for when you need to answer general travel questions"
+        ),
+        Tool(
+            name = "Search Trip Google",
+            func=search_general,
+            description="useful for when you need to answer trip plan questions"
         ),
         Tool(
             name = "Search places",
             func=search_places,
-            description="Useful for when you need to answer questions about bars, restaurants, burger joints, cafes, and attractions in a specific location"
+            description="useful when you need to answer informations about variety of places including hotels, restaurants, landmarks, businesses, geographical locations"
         ),
-        Tool(
-            name = "Search tripadvisor",
-            func=search_tripadvisor,
-            description="useful for when you need to answer trip plan questions"
-        ),
-        Tool(
-            name = "Search amadeus",
-            func=search_amadeus,
-            description="useful for when you need to answer hotel questions"
-        )
     ]
     prompt = CustomPromptTemplate(
         template=template,
@@ -225,7 +157,7 @@ def agent():
     )
 
     output_parser = CustomOutputParser()
-    llm = ChatOpenAI(temperature=0)
+    llm = ChatOpenAI(temperature=0.7)
     llm_chain = LLMChain(llm=llm, prompt=prompt)
     tool_names = [tool.name for tool in tools]
 
